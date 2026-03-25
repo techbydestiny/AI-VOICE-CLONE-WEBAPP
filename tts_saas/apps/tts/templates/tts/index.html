@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}VoiceClone - Professional Text to Speech{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Hero Section -->
+    <div class="text-center mb-12">
+        <h1 class="text-5xl font-bold gradient-bg text-transparent bg-clip-text mb-4">
+            Text to Speech Generator
+        </h1>
+        <p class="text-xl text-gray-600">Convert your text into natural-sounding speech with AI</p>
+    </div>
+    
+    <!-- Usage Stats -->
+    {% if user.is_authenticated %}
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-600 mb-1">Your Monthly Usage</p>
+                    <div class="flex items-baseline">
+                        <span class="text-3xl font-bold text-gray-900">{{ generations_used }}</span>
+                        <span class="text-xl text-gray-600">/{{ generations_limit }}</span>
+                        <span class="ml-2 text-gray-500">generations</span>
+                    </div>
+                </div>
+                <div class="bg-white px-4 py-2 rounded-full">
+                    <span class="font-medium capitalize text-blue-600">{{ subscription_tier }}</span>
+                </div>
+            </div>
+            {% if subscription_tier == 'basic' and generations_used >= generations_limit %}
+                <div class="mt-4 p-4 bg-yellow-50 rounded-lg">
+                    <p class="text-yellow-800">
+                        You've reached your monthly limit. 
+                        <a href="{% url 'accounts:subscribe' %}" class="font-bold underline hover:text-yellow-900">
+                            Upgrade to Premium for unlimited generations
+                        </a>
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-6 mb-8">
+            <p class="text-lg text-yellow-800">
+                ✨ You have <span class="font-bold">{{ free_limit }} free generation</span>. 
+                <a href="{% url 'accounts:register' %}" class="font-bold underline hover:text-yellow-900">Sign up</a> 
+                to get <span class="font-bold">{{ basic_limit }} generations monthly</span>, or 
+                <a href="{% url 'accounts:subscribe' %}" class="font-bold underline hover:text-yellow-900">upgrade to premium</a> 
+                for unlimited access at <span class="font-bold">₦{{ premium_price }}/month</span>.
+            </p>
+        </div>
+    {% endif %}
+    
+    <!-- Main Card -->
+    <div class="bg-white rounded-2xl shadow-xl p-8 card-hover">
+        <form id="tts-form" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Text Input -->
+            <div class="mb-6">
+                <label for="text" class="block text-lg font-semibold text-gray-800 mb-3">
+                    Text to Convert
+                </label>
+                <textarea 
+                    id="text" 
+                    name="text" 
+                    rows="5" 
+                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    placeholder="Enter your text here... (e.g., Hello, welcome to VoiceClone!)"
+                    required
+                ></textarea>
+            </div>
+            
+            <!-- Voice Upload -->
+            <div class="mb-8">
+                <label for="voice_sample" class="block text-lg font-semibold text-gray-800 mb-3">
+                    Voice Sample
+                    <span class="text-sm font-normal text-gray-500 ml-2">(Optional - we'll use default if none provided)</span>
+                </label>
+                <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 transition">
+                    <input 
+                        type="file" 
+                        id="voice_sample" 
+                        name="voice_sample" 
+                        accept="audio/*"
+                        class="hidden"
+                    >
+                    <button type="button" onclick="document.getElementById('voice_sample').click()" 
+                            class="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition">
+                        Choose File
+                    </button>
+                    <span id="file-name" class="ml-3 text-gray-500">No file selected</span>
+                    <p class="text-sm text-gray-500 mt-2">Upload a clear audio sample (WAV, MP3) of the voice you want to clone</p>
+                </div>
+            </div>
+            
+            <!-- Saved Voices -->
+            {% if user.is_authenticated and voice_samples %}
+            <div class="mb-8">
+                <label class="block text-lg font-semibold text-gray-800 mb-3">Your Saved Voices</label>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {% for voice in voice_samples %}
+                    <div class="border rounded-xl p-4 hover:shadow-md transition">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-gray-700">{{ voice.name|truncatechars:15 }}</span>
+                            <button 
+                                type="button" 
+                                onclick="useVoiceSample('{{ voice.audio_file.url }}')"
+                                class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            >
+                                Use
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Generate Button -->
+            <div class="text-center">
+                <button 
+                    type="button"
+                    id="generate-btn"
+                    class="gradient-bg text-white px-12 py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                >
+                    Generate Audio
+                </button>
+            </div>
+        </form>
+        
+        <!-- Loading -->
+        <div id="loading" class="hidden mt-8 text-center">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+            <p class="text-gray-600 mt-4 text-lg">Generating your audio... This may take a moment.</p>
+        </div>
+        
+        <!-- Result -->
+        <div id="result" class="hidden mt-8 p-6 bg-gray-50 rounded-xl">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Generated Audio</h3>
+            <audio id="audio-player" controls class="w-full"></audio>
+            <div class="mt-4 flex justify-end">
+                <a id="download-link" href="#" download 
+                   class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Download Audio
+                </a>
+            </div>
+        </div>
+        
+        <!-- Error -->
+        <div id="error-message" class="hidden mt-8 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl"></div>
+    </div>
+</div>
+
+<script>
+// Show filename when file is selected
+document.getElementById('voice_sample').addEventListener('change', function(e) {
+    const fileName = e.target.files[0] ? e.target.files[0].name : 'No file selected';
+    document.getElementById('file-name').textContent = fileName;
+});
+
+// Generate button click handler
+document.getElementById('generate-btn').addEventListener('click', function() {
+    const text = document.getElementById('text').value.trim();
+    const errorDiv = document.getElementById('error-message');
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('result');
+    const generateBtn = this;
+    
+    if (!text) {
+        errorDiv.textContent = "Please enter some text to convert";
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+    
+    // Hide previous results, show loading
+    errorDiv.classList.add('hidden');
+    result.classList.add('hidden');
+    loading.classList.remove('hidden');
+    generateBtn.disabled = true;
+    
+    // Create form data
+    const formData = new FormData(document.getElementById('tts-form'));
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    // Send request
+    fetch('/generate/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('audio-player').src = data.audio_url;
+            document.getElementById('download-link').href = data.audio_url;
+            result.classList.remove('hidden');
+            document.getElementById('text').value = '';
+            
+            // Update usage if logged in
+            if (data.generations_left !== undefined) {
+                const usageSpan = document.querySelector('.flex.items-baseline .text-3xl');
+                if (usageSpan) {
+                    const parts = usageSpan.textContent.split('/');
+                    const used = parseInt(parts[0]) + 1;
+                    usageSpan.textContent = used;
+                }
+            }
+        } else {
+            errorDiv.textContent = data.message || data.error || "An error occurred";
+            errorDiv.classList.remove('hidden');
+            
+            if (data.error === 'free_limit_reached') {
+                setTimeout(() => window.location.href = '/accounts/login/', 3000);
+            }
+        }
+    })
+    .catch(error => {
+        errorDiv.textContent = "Network error. Please try again.";
+        errorDiv.classList.remove('hidden');
+    })
+    .finally(() => {
+        loading.classList.add('hidden');
+        generateBtn.disabled = false;
+    });
+});
+
+function useVoiceSample(url) {
+    alert("Using saved voice: " + url);
+    // Implement this feature
+}
+</script>
+{% endblock %}

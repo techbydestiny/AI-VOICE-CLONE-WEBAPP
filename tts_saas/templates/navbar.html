@@ -1,0 +1,36 @@
+{% load static %}
+<nav class="bg-white shadow-lg sticky top-0 z-50">
+    <div class="container mx-auto px-4">
+        <div class="flex justify-between items-center h-16">
+            <div class="flex items-center space-x-8">
+                <a href="{% url 'tts:index' %}" class="text-2xl font-bold gradient-bg text-transparent bg-clip-text">VoiceClone</a>
+                <a href="{% url 'tts:index' %}" class="text-gray-600 hover:text-gray-900 font-medium">Home</a>
+                <a href="#features" class="text-gray-600 hover:text-gray-900 font-medium">Features</a>
+                <a href="#pricing" class="text-gray-600 hover:text-gray-900 font-medium">Pricing</a>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'tts:history' %}" class="text-gray-600 hover:text-gray-900 font-medium">History</a>
+                    <a href="{% url 'accounts:profile' %}" class="text-gray-600 hover:text-gray-900 font-medium">Profile</a>
+                    <div class="bg-blue-50 px-3 py-1 rounded-full">
+                        <span class="text-sm font-medium text-blue-700">
+                            {{ user.profile.generations_used }}/{{ user.profile.generations_limit }} used
+                        </span>
+                    </div>
+                    <form method="post" action="{% url 'accounts:logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-medium">
+                            Logout
+                        </button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'accounts:login' %}" class="text-gray-600 hover:text-gray-900 font-medium">Login</a>
+                    <a href="{% url 'accounts:register' %}" class="gradient-bg text-white px-6 py-2 rounded-lg hover:opacity-90 transition font-medium">
+                        Sign Up Free
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>

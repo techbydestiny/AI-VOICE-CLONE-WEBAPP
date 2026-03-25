@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Generation History - VoiceClone{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8">Your Generation History</h1>
+    
+    {% if generations %}
+    <div class="space-y-4">
+        {% for gen in generations %}
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <div class="flex justify-between items-start">
+                <div class="flex-1">
+                    <p class="text-gray-800 mb-2">{{ gen.text|truncatechars:100 }}</p>
+                    <p class="text-sm text-gray-500">
+                        Created: {{ gen.created_at|date:"F j, Y, g:i a" }}
+                    </p>
+                    {% if gen.voice_sample %}
+                    <p class="text-sm text-gray-500">
+                        Voice: {{ gen.voice_sample.name }}
+                    </p>
+                    {% endif %}
+                </div>
+                <audio controls class="ml-4">
+                    <source src="{{ gen.output_file.url }}" type="audio/wav">
+                </audio>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-lg shadow-md p-8 text-center">
+        <p class="text-gray-500">No generations yet.</p>
+        <a href="{% url 'tts:index' %}" class="inline-block mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600">
+            Create Your First Generation
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

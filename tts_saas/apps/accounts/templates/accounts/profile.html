@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Profile - VoiceClone{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8">Your Profile</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Account Info -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Account Information</h2>
+            <div class="space-y-2">
+                <p><span class="font-medium">Username:</span> {{ user.username }}</p>
+                <p><span class="font-medium">Email:</span> {{ user.email }}</p>
+                <p><span class="font-medium">Member since:</span> {{ user.date_joined|date:"F j, Y" }}</p>
+            </div>
+        </div>
+        
+        <!-- Subscription Info -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Subscription</h2>
+            <div class="space-y-2">
+                <p>
+                    <span class="font-medium">Current Plan:</span> 
+                    <span class="capitalize">{{ user.profile.subscription_tier }}</span>
+                </p>
+                <p>
+                    <span class="font-medium">Usage:</span> 
+                    {{ user.profile.generations_used }}/{{ user.profile.generations_limit }} generations
+                </p>
+                {% if user.profile.subscription_expiry %}
+                <p>
+                    <span class="font-medium">Expires:</span> 
+                    {{ user.profile.subscription_expiry|date:"F j, Y" }}
+                </p>
+                {% endif %}
+                
+                {% if user.profile.subscription_tier != 'premium' %}
+                <div class="mt-4">
+                    <a href="{% url 'accounts:subscribe' %}" class="inline-block bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                        Upgrade to Premium (₦{{ premium_price }})
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Voice Samples -->
+        <div class="bg-white rounded-lg shadow-md p-6 md:col-span-2">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Your Voice Samples</h2>
+            {% if user.voice_samples.all %}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% for voice in user.voice_samples.all %}
+                <div class="border rounded-lg p-4">
+                    <p class="font-medium">{{ voice.name }}</p>
+                    <p class="text-sm text-gray-500">Uploaded: {{ voice.uploaded_at|date:"M j, Y" }}</p>
+                    <audio controls class="w-full mt-2">
+                        <source src="{{ voice.audio_file.url }}" type="audio/wav">
+                    </audio>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-500">No voice samples uploaded yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
