@@ -3,6 +3,8 @@ DEBUG = True
 import os
 from pathlib import Path
 from decouple import config
+import dj_database_url
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 BASE_URL = config('BASE_URL', default='http://127.0.0.1:8000')
@@ -61,11 +63,12 @@ WSGI_APPLICATION = 'tts_saas.wsgi.application'
 
 # Database
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default='sqlite:///db.sqlite3',
+        conn_max_age=600
+    )
 }
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -124,3 +127,5 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@voiceclone.co
 KORAPAY_SECRET_KEY = config('KORAPAY_SECRET_KEY', default='')
 KORAPAY_PUBLIC_KEY = config('KORAPAY_PUBLIC_KEY', default='')
 KORAPAY_API_URL = 'https://api.korapay.com/v1'
+
+BASE_URL = config('BASE_URL', default='http://127.0.0.1:8000')
