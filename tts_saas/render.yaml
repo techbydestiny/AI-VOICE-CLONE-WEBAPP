@@ -4,11 +4,12 @@ services:
     env: python
     buildCommand: |
       pip install --upgrade pip setuptools wheel
-      pip install torch==2.0.1 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cpu
+      pip install numpy==1.24.3
+      pip install torch==2.1.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cpu
       pip install -r requirements.txt
       python manage.py collectstatic --noinput
       python manage.py migrate
-    startCommand: gunicorn voiceclone.wsgi:application --log-file - --timeout 120
+    startCommand: gunicorn voiceclone.wsgi:application --log-file - --timeout 120 --workers 1
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.11
@@ -34,6 +35,8 @@ services:
         sync: false
       - key: KORAPAY_PUBLIC_KEY
         sync: false
+      - key: WEB_CONCURRENCY
+        value: 1
 
 databases:
   - name: ai-voice-clone-db
